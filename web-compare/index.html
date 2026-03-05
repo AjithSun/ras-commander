@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HEC-RAS Flood Comparison Map</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="controls">
+    <h3>Flood Comparison</h3>
+    <div class="control-group">
+      <label for="scenario-a">Scenario A</label>
+      <select id="scenario-a"></select>
+    </div>
+    <div class="control-group">
+      <label for="scenario-b">Scenario B</label>
+      <select id="scenario-b"></select>
+    </div>
+    <div class="control-group">
+      <label for="display-mode">Display</label>
+      <select id="display-mode">
+        <option value="a">Scenario A</option>
+        <option value="b">Scenario B</option>
+        <option value="diff" selected>Difference (B - A)</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="variable">Variable</label>
+      <select id="variable">
+        <option value="maximum_water_surface">Max Water Surface</option>
+        <option value="maximum_depth">Max Depth</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="opacity">Opacity</label>
+      <input type="range" id="opacity" min="0" max="100" value="80" />
+    </div>
+  </div>
+
+  <div id="legend"></div>
+
+  <div id="info-panel">
+    <span id="info-text">Hover over mesh to inspect</span>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Loading mesh data...</p>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
