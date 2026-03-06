@@ -39,6 +39,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
   margin-bottom: 3px;
 }
 
+.control-group label input[type="checkbox"] {
+  margin-right: 6px;
+  transform: translateY(1px);
+}
+
 .control-group select,
 .control-group input[type="range"] {
   width: 100%;

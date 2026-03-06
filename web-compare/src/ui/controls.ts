@@ -6,17 +6,24 @@ export interface ControlState {
   mode: DisplayMode;
   variable: string;
   opacity: number;
+  autoDiffScale: boolean;
 }
 
 export type OnChangeCallback = (state: ControlState) => void;
 
 export function initControls(metadata: Metadata, onChange: OnChangeCallback): ControlState {
   const scenarioNames = Object.keys(metadata.scenarios);
+  const variableNames = metadata.variables;
   const selectA = document.getElementById('scenario-a') as HTMLSelectElement;
   const selectB = document.getElementById('scenario-b') as HTMLSelectElement;
   const modeSelect = document.getElementById('display-mode') as HTMLSelectElement;
   const varSelect = document.getElementById('variable') as HTMLSelectElement;
   const opacitySlider = document.getElementById('opacity') as HTMLInputElement;
+  const autoDiffScale = document.getElementById('auto-diff-scale') as HTMLInputElement;
+
+  selectA.innerHTML = '';
+  selectB.innerHTML = '';
+  varSelect.innerHTML = '';
 
   // Populate scenario dropdowns
   for (const name of scenarioNames) {
@@ -25,9 +32,16 @@ export function initControls(metadata: Metadata, onChange: OnChangeCallback): Co
     selectB.add(new Option(label, name));
   }
 
-  // Default: existing vs alt1
+  for (const variable of variableNames) {
+    const label = variable
+      .replaceAll('_', ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    varSelect.add(new Option(label, variable));
+  }
+
   selectA.value = scenarioNames[0];
   selectB.value = scenarioNames.length > 1 ? scenarioNames[1] : scenarioNames[0];
+  varSelect.value = variableNames[0];
 
   const state: ControlState = {
     scenarioA: selectA.value,
@@ -35,6 +49,7 @@ export function initControls(metadata: Metadata, onChange: OnChangeCallback): Co
     mode: modeSelect.value as DisplayMode,
     variable: varSelect.value,
     opacity: parseInt(opacitySlider.value) / 100,
+    autoDiffScale: autoDiffScale.checked,
   };
 
   const emit = () => {
@@ -43,6 +58,7 @@ export function initControls(metadata: Metadata, onChange: OnChangeCallback): Co
     state.mode = modeSelect.value as DisplayMode;
     state.variable = varSelect.value;
     state.opacity = parseInt(opacitySlider.value) / 100;
+    state.autoDiffScale = autoDiffScale.checked;
     onChange(state);
   };
 
@@ -51,6 +67,7 @@ export function initControls(metadata: Metadata, onChange: OnChangeCallback): Co
   modeSelect.addEventListener('change', emit);
   varSelect.addEventListener('change', emit);
   opacitySlider.addEventListener('input', emit);
+  autoDiffScale.addEventListener('change', emit);
 
   return state;
 }

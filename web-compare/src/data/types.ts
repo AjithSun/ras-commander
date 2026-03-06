@@ -1,35 +1,61 @@
-/** Binary mesh geometry (shared across scenarios). */
-export interface MeshData {
-  numVertices: number;
-  numTriangles: number;
-  bounds: { west: number; south: number; east: number; north: number };
-  /** Interleaved [lng, lat, lng, lat, ...] */
-  vertices: Float32Array;
-  /** Triangle vertex indices [v0,v1,v2, v0,v1,v2, ...] */
-  triangles: Uint32Array;
-  /** Which cell each triangle belongs to */
-  cellMap: Uint32Array;
+export interface TileVariableMeta {
+  path_template: string;
+  min: number;
+  max: number;
 }
 
-/** Per-cell scalar values for one scenario+variable. */
-export interface CellValues {
-  numCells: number;
+export interface TileScenarioMeta {
+  source_file: string;
+  variables: Record<string, TileVariableMeta>;
+}
+
+export interface TileGrid {
+  tile_size: number;
+  min_zoom: number;
+  max_zoom: number;
+  full_width: number;
+  full_height: number;
+  bounds: [number, number, number, number];
+  tile_geometries_file: string;
+}
+
+export interface Metadata {
+  format: 'tile_grid_v1';
+  nodata: number;
+  tile_grid: TileGrid;
+  scenarios: Record<string, TileScenarioMeta>;
+  variables: string[];
+}
+
+export interface TileId {
+  z: number;
+  x: number;
+  y: number;
+}
+
+export interface FloatTile {
+  id: TileId;
+  width: number;
+  height: number;
   nodata: number;
   values: Float32Array;
 }
 
-/** Scenario metadata from metadata.json */
-export interface ScenarioMeta {
-  file: string;
-  variables: Record<string, { file: string; min: number; max: number }>;
+export interface TileCornerIndex {
+  [tileKey: string]: [
+    number, number,
+    number, number,
+    number, number,
+    number, number,
+  ];
 }
 
-export interface Metadata {
-  bounds: [number, number, number, number];
-  num_cells: number;
-  nodata: number;
-  scenarios: Record<string, ScenarioMeta>;
-  variables: string[];
+export interface TileValueSample {
+  valueA: number;
+  valueB: number;
+  diff: number;
+  nodataA: boolean;
+  nodataB: boolean;
 }
 
 export type DisplayMode = 'a' | 'b' | 'diff';

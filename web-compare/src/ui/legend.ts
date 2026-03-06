@@ -6,9 +6,10 @@ export function updateLegend(mode: DisplayMode, vmin: number, vmax: number, vari
   const el = container();
   const isDiff = mode === 'diff';
 
+  const prettyVar = variable.replaceAll('_', ' ');
   const title = isDiff
     ? 'Difference (B - A)'
-    : variable === 'maximum_depth' ? 'Max Depth (ft)' : 'Max WSE (ft)';
+    : `${prettyVar} (ft)`;
 
   let gradient: string;
   let labels: string;

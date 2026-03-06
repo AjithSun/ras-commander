@@ -29,26 +29,29 @@
     </div>
     <div class="control-group">
       <label for="variable">Variable</label>
-      <select id="variable">
-        <option value="maximum_water_surface">Max Water Surface</option>
-        <option value="maximum_depth">Max Depth</option>
-      </select>
+      <select id="variable"></select>
     </div>
     <div class="control-group">
       <label for="opacity">Opacity</label>
       <input type="range" id="opacity" min="0" max="100" value="80" />
+    </div>
+    <div class="control-group">
+      <label for="auto-diff-scale">
+        <input type="checkbox" id="auto-diff-scale" checked />
+        Auto Diff Scale
+      </label>
     </div>
   </div>
 
   <div id="legend"></div>
 
   <div id="info-panel">
-    <span id="info-text">Hover over mesh to inspect</span>
+    <span id="info-text">Hover over inundation tiles to inspect</span>
   </div>
 
   <div id="loading">
     <div class="spinner"></div>
-    <p>Loading mesh data...</p>
+    <p>Loading tiled data...</p>
   </div>
 
   <script type="module" src="/src/main.ts"></script>
