@@ -11,103 +11,80 @@ import { updateLegend } from './ui/legend';
 const loading = document.getElementById('loading');
 
 async function main(): Promise<void> {
-  const metadata = await loadMetadata();
-  const tileCorners = await loadTileCornerIndex(metadata);
-  const [west, south, east, north] = metadata.tile_grid.bounds;
-  const map = createMap('map', { west, south, east, north });
-  const tileManager = new TileManager(metadata, tileCorners);
+  try {
+    const metadata = await loadMetadata();
+    const tileCorners = await loadTileCornerIndex(metadata);
+    const [west, south, east, north] = metadata.tile_grid.bounds;
+    const map = createMap('map', { west, south, east, north });
+    const tileManager = new TileManager(metadata, tileCorners);
 
-  let overlay: TileOverlayRenderer | null = null;
-  let currentMode: DisplayMode = 'diff';
-  let currentControls: ControlState;
-  let dynamicDiffRange: [number, number] | null = null;
-  let lastDynamicTickMs = 0;
+    let overlay: TileOverlayRenderer | null = null;
+    let currentControls: ControlState;
+    let currentMode: DisplayMode = 'diff';
 
-  const initial = initControls(metadata, (state) => {
-    currentControls = state;
-    dynamicDiffRange = null;
-    if (!overlay) return;
-    applyState(metadata, overlay, state, dynamicDiffRange);
-    currentMode = state.mode;
-    map.triggerRepaint();
-  });
-  currentControls = initial;
-
-  map.on('load', () => {
-    const initialOverlayState = toOverlayState(metadata, initial, dynamicDiffRange);
-    overlay = new TileOverlayRenderer(map, metadata, tileManager, initialOverlayState);
-    applyState(metadata, overlay, initial, dynamicDiffRange);
-    currentMode = initial.mode;
-
-    setupHoverInspector(map, overlay, () => currentMode);
-    loading?.classList.add('hidden');
-
-    map.on('render', () => {
+    const initial = initControls(metadata, (state) => {
+      currentControls = state;
       if (!overlay) return;
-      if (currentControls.mode !== 'diff' || !currentControls.autoDiffScale) return;
-
-      const now = performance.now();
-      if (now - lastDynamicTickMs < 250) return;
-      lastDynamicTickMs = now;
-
-      const proposed = overlay.getVisibleDiffRange(0.98);
-      if (!proposed) return;
-
-      const nextAbs = Math.abs(proposed[1]);
-      const prevAbs = dynamicDiffRange ? Math.abs(dynamicDiffRange[1]) : 0;
-      if (prevAbs > 0 && Math.abs(nextAbs - prevAbs) / prevAbs < 0.08) {
-        return;
-      }
-
-      dynamicDiffRange = proposed;
-      applyState(metadata, overlay, currentControls, dynamicDiffRange);
+      applyState(metadata, overlay, state);
+      currentMode = state.mode;
+      map.triggerRepaint();
     });
-  });
+    currentControls = initial;
+
+    map.on('load', () => {
+      const initialOverlayState = toOverlayState(metadata, initial);
+      overlay = new TileOverlayRenderer(map, metadata, tileManager, initialOverlayState);
+      applyState(metadata, overlay, initial);
+      currentMode = initial.mode;
+
+      setupHoverInspector(
+        map,
+        overlay,
+        () => currentMode,
+        () => currentControls.metric,
+      );
+      loading?.classList.add('hidden');
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (loading) {
+      loading.classList.remove('hidden');
+      loading.innerHTML = `<p style="max-width:420px;text-align:center;padding:20px">WebGPU startup failed: ${message}</p>`;
+    }
+    throw err;
+  }
 }
 
 function applyState(
   metadata: Metadata,
   overlay: TileOverlayRenderer,
   controlState: ControlState,
-  dynamicDiffRange: [number, number] | null,
 ): void {
-  const overlayState = toOverlayState(metadata, controlState, dynamicDiffRange);
+  const overlayState = toOverlayState(metadata, controlState);
   overlay.updateState(overlayState);
   updateLegend(
     controlState.mode,
+    controlState.metric,
     overlayState.valueMin,
     overlayState.valueMax,
-    controlState.variable,
   );
 }
 
 function toOverlayState(
   metadata: Metadata,
   controlState: ControlState,
-  dynamicDiffRange: [number, number] | null,
 ): TileOverlayState {
-  const metaA = metadata.scenarios[controlState.scenarioA].variables[controlState.variable];
-  const metaB = metadata.scenarios[controlState.scenarioB].variables[controlState.variable];
-  const [staticMin, staticMax] = getDisplayRange(
-    controlState.mode,
-    metaA.min,
-    metaA.max,
-    metaB.min,
-    metaB.max,
-  );
-  const [valueMin, valueMax] = (
-    controlState.mode === 'diff'
-    && controlState.autoDiffScale
-    && dynamicDiffRange
-  )
-    ? dynamicDiffRange
-    : [staticMin, staticMax];
+  const simHours = metadata.temporal.simulation_duration_hours;
+  const metricRange = metadata.metric_ranges_hours[controlState.metric] ?? [0, simHours];
+  const [valueMin, valueMax] = getDisplayRange(controlState.mode, metricRange[0], metricRange[1]);
 
   return {
     scenarioA: controlState.scenarioA,
     scenarioB: controlState.scenarioB,
     variable: controlState.variable,
+    metric: controlState.metric,
     mode: controlState.mode,
+    threshold: controlState.threshold,
     valueMin,
     valueMax,
     opacity: controlState.opacity,
@@ -115,20 +92,15 @@ function toOverlayState(
 }
 
 function getDisplayRange(
-  mode: DisplayMode,
-  minA: number,
-  maxA: number,
-  minB: number,
-  maxB: number,
+  mode: 'a' | 'b' | 'diff',
+  metricMin: number,
+  metricMax: number,
 ): [number, number] {
   if (mode === 'diff') {
-    const maxAbs = Math.max(Math.abs(maxB - minA), Math.abs(maxA - minB), 1);
+    const maxAbs = Math.max(Math.abs(metricMin), Math.abs(metricMax), 0.1);
     return [-maxAbs, maxAbs];
   }
-  if (mode === 'b') {
-    return [minB, maxB];
-  }
-  return [minA, maxA];
+  return [metricMin, metricMax];
 }
 
 void main();

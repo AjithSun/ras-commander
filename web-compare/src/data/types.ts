@@ -1,12 +1,28 @@
-export interface TileVariableMeta {
+export type DisplayMode = 'a' | 'b' | 'diff';
+
+export type MetricKind =
+  | 'arrival'
+  | 'peak_time'
+  | 'time_to_peak'
+  | 'duration_above_threshold';
+
+export interface TemporalVariableMeta {
   path_template: string;
-  min: number;
-  max: number;
 }
 
-export interface TileScenarioMeta {
-  source_file: string;
-  variables: Record<string, TileVariableMeta>;
+export interface TemporalScenarioMeta {
+  plan_number: string;
+  plan_title: string;
+  variables: Record<string, TemporalVariableMeta>;
+}
+
+export interface TemporalInfo {
+  timesteps: number;
+  dt_hours: number;
+  simulation_start_iso: string;
+  simulation_duration_hours: number;
+  threshold_default: number;
+  value_dtype?: 'float32' | 'float16';
 }
 
 export interface TileGrid {
@@ -20,11 +36,14 @@ export interface TileGrid {
 }
 
 export interface Metadata {
-  format: 'tile_grid_v1';
+  format: 'temporal_tile_v1';
   nodata: number;
+  temporal: TemporalInfo;
   tile_grid: TileGrid;
-  scenarios: Record<string, TileScenarioMeta>;
   variables: string[];
+  metrics: MetricKind[];
+  metric_ranges_hours: Record<MetricKind, [number, number]>;
+  scenarios: Record<string, TemporalScenarioMeta>;
 }
 
 export interface TileId {
@@ -33,12 +52,16 @@ export interface TileId {
   y: number;
 }
 
-export interface FloatTile {
+export interface TemporalTile {
   id: TileId;
   width: number;
   height: number;
+  timesteps: number;
   nodata: number;
-  values: Float32Array;
+  dtHours: number;
+  valueType: 'f32' | 'f16';
+  valuesF32?: Float32Array;
+  valuesF16?: Uint16Array;
 }
 
 export interface TileCornerIndex {
@@ -50,12 +73,10 @@ export interface TileCornerIndex {
   ];
 }
 
-export interface TileValueSample {
-  valueA: number;
-  valueB: number;
+export interface TileMetricSample {
+  metricA: number;
+  metricB: number;
   diff: number;
   nodataA: boolean;
   nodataB: boolean;
 }
-
-export type DisplayMode = 'a' | 'b' | 'diff';

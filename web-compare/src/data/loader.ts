@@ -1,4 +1,9 @@
-import type { FloatTile, Metadata, TileCornerIndex, TileId } from './types';
+import type {
+  Metadata,
+  TemporalTile,
+  TileCornerIndex,
+  TileId,
+} from './types';
 
 const DATA_BASE = '/data';
 
@@ -6,7 +11,7 @@ export async function loadMetadata(): Promise<Metadata> {
   const resp = await fetch(`${DATA_BASE}/metadata.json`);
   if (!resp.ok) throw new Error(`Failed to load metadata: ${resp.status}`);
   const metadata = await resp.json() as Metadata;
-  if (metadata.format !== 'tile_grid_v1') {
+  if (metadata.format !== 'temporal_tile_v1') {
     throw new Error(
       `Unsupported metadata format: ${String((metadata as { format?: unknown }).format)}`,
     );
@@ -52,7 +57,7 @@ export function buildTileUrl(
   return `${DATA_BASE}/${path}`;
 }
 
-export async function loadFloatTile(url: string, tileId: TileId): Promise<FloatTile | null> {
+export async function loadTemporalTile(url: string, tileId: TileId): Promise<TemporalTile | null> {
   const resp = await fetch(url);
   if (resp.status === 404) return null;
   if (!resp.ok) throw new Error(`Failed to load tile ${url}: ${resp.status}`);
@@ -60,25 +65,47 @@ export async function loadFloatTile(url: string, tileId: TileId): Promise<FloatT
   const buf = await resp.arrayBuffer();
   const view = new DataView(buf);
 
-  if (buf.byteLength < 8) {
-    throw new Error(`Tile too small: ${url}`);
+  const headerBytes = 16;
+  if (buf.byteLength < headerBytes) {
+    throw new Error(`Temporal tile too small: ${url}`);
   }
+
   const width = view.getUint16(0, true);
   const height = view.getUint16(2, true);
-  const nodata = view.getFloat32(4, true);
-  const expectedFloats = width * height;
-  const expectedBytes = 8 + expectedFloats * 4;
-  if (buf.byteLength !== expectedBytes) {
+  const timesteps = view.getUint16(4, true);
+  const flags = view.getUint16(6, true);
+  const nodata = view.getFloat32(8, true);
+  const dtHours = view.getFloat32(12, true);
+
+  const valuesCount = width * height * timesteps;
+  const isF16 = (flags & 1) === 1;
+  const bytesPerValue = isF16 ? 2 : 4;
+  const expectedBytes = headerBytes + valuesCount * bytesPerValue;
+  const paddedExpectedBytes = isF16 ? expectedBytes + 2 : expectedBytes;
+
+  if (buf.byteLength !== expectedBytes && buf.byteLength !== paddedExpectedBytes) {
     throw new Error(
-      `Tile payload mismatch for ${url}: expected ${expectedBytes}, got ${buf.byteLength}`,
+      `Temporal tile payload mismatch for ${url}: expected ${expectedBytes}, got ${buf.byteLength}`,
     );
   }
-  const values = new Float32Array(buf, 8, expectedFloats);
+
+  const valueType: TemporalTile['valueType'] = isF16 ? 'f16' : 'f32';
+  const valuesF32 = isF16
+    ? undefined
+    : new Float32Array(buf, headerBytes, valuesCount);
+  const valuesF16 = isF16
+    ? new Uint16Array(buf, headerBytes, valuesCount)
+    : undefined;
+
   return {
     id: tileId,
     width,
     height,
+    timesteps,
     nodata,
-    values,
+    dtHours,
+    valueType,
+    valuesF32,
+    valuesF16,
   };
 }

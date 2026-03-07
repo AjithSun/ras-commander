@@ -32,14 +32,16 @@
       <select id="variable"></select>
     </div>
     <div class="control-group">
-      <label for="opacity">Opacity</label>
-      <input type="range" id="opacity" min="0" max="100" value="80" />
+      <label for="metric">Metric</label>
+      <select id="metric"></select>
     </div>
     <div class="control-group">
-      <label for="auto-diff-scale">
-        <input type="checkbox" id="auto-diff-scale" checked />
-        Auto Diff Scale
-      </label>
+      <label for="threshold">Threshold (ft)</label>
+      <input type="number" id="threshold" min="0" step="0.1" value="0.5" />
+    </div>
+    <div class="control-group">
+      <label for="opacity">Opacity</label>
+      <input type="range" id="opacity" min="0" max="100" value="80" />
     </div>
   </div>
 
@@ -51,7 +53,7 @@
 
   <div id="loading">
     <div class="spinner"></div>
-    <p>Loading tiled data...</p>
+    <p>Loading WebGPU temporal tiles...</p>
   </div>
 
   <script type="module" src="/src/main.ts"></script>

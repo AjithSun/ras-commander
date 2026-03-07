@@ -1,15 +1,19 @@
-import type { DisplayMode } from '../data/types';
+import type { DisplayMode, MetricKind } from '../data/types';
 
 const container = () => document.getElementById('legend')!;
 
-export function updateLegend(mode: DisplayMode, vmin: number, vmax: number, variable: string) {
+export function updateLegend(
+  mode: DisplayMode,
+  metric: MetricKind,
+  vmin: number,
+  vmax: number,
+): void {
   const el = container();
   const isDiff = mode === 'diff';
 
-  const prettyVar = variable.replaceAll('_', ' ');
   const title = isDiff
-    ? 'Difference (B - A)'
-    : `${prettyVar} (ft)`;
+    ? `${metric.replaceAll('_', ' ')} (B - A), hours`
+    : `${metric.replaceAll('_', ' ')}, hours`;
 
   let gradient: string;
   let labels: string;

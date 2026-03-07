@@ -45,6 +45,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 }
 
 .control-group select,
+.control-group input[type="number"],
 .control-group input[type="range"] {
   width: 100%;
   padding: 4px 6px;

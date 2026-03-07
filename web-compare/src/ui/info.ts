@@ -1,11 +1,12 @@
 import type maplibregl from 'maplibre-gl';
-import type { DisplayMode } from '../data/types';
+import type { DisplayMode, MetricKind } from '../data/types';
 import type { TileOverlayRenderer } from '../map/tile-overlay';
 
 export function setupHoverInspector(
   map: maplibregl.Map,
   overlay: TileOverlayRenderer,
   getMode: () => DisplayMode,
+  getMetric: () => MetricKind,
 ): void {
   const infoText = document.getElementById('info-text');
   if (!infoText) return;
@@ -18,19 +19,20 @@ export function setupHoverInspector(
       return;
     }
 
-    const fmtA = sample.nodataA ? 'N/A' : sample.valueA.toFixed(2);
-    const fmtB = sample.nodataB ? 'N/A' : sample.valueB.toFixed(2);
+    const metric = getMetric().replaceAll('_', ' ');
+    const fmtA = sample.nodataA ? 'N/A' : `${sample.metricA.toFixed(2)} h`;
+    const fmtB = sample.nodataB ? 'N/A' : `${sample.metricB.toFixed(2)} h`;
     const fmtD = (sample.nodataA || sample.nodataB)
       ? 'N/A'
-      : `${sample.diff >= 0 ? '+' : ''}${sample.diff.toFixed(2)}`;
+      : `${sample.diff >= 0 ? '+' : ''}${sample.diff.toFixed(2)} h`;
 
     const mode = getMode();
     if (mode === 'diff') {
-      infoText.innerHTML = `A: ${fmtA} | B: ${fmtB} | <b>Diff: ${fmtD}</b>`;
+      infoText.innerHTML = `${metric} A: ${fmtA} | B: ${fmtB} | <b>Diff: ${fmtD}</b>`;
     } else if (mode === 'b') {
-      infoText.innerHTML = `Scenario B: <b>${fmtB}</b>`;
+      infoText.innerHTML = `${metric} B: <b>${fmtB}</b>`;
     } else {
-      infoText.innerHTML = `Scenario A: <b>${fmtA}</b>`;
+      infoText.innerHTML = `${metric} A: <b>${fmtA}</b>`;
     }
   });
 }

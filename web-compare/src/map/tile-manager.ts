@@ -1,6 +1,6 @@
 import type maplibregl from 'maplibre-gl';
-import { buildTileUrl, loadFloatTile } from '../data/loader';
-import type { FloatTile, Metadata, TileCornerIndex, TileId } from '../data/types';
+import { buildTileUrl, loadTemporalTile } from '../data/loader';
+import type { Metadata, TemporalTile, TileCornerIndex, TileId } from '../data/types';
 
 export interface TileBounds {
   west: number;
@@ -28,12 +28,12 @@ export class TileManager {
   private metadata: Metadata;
   private tileCornerIndex: TileCornerIndex;
   private maxCacheEntries: number;
-  private tileCache = new Map<string, Promise<FloatTile | null>>();
+  private tileCache = new Map<string, Promise<TemporalTile | null>>();
 
   constructor(
     metadata: Metadata,
     tileCornerIndex: TileCornerIndex,
-    maxCacheEntries = 4000,
+    maxCacheEntries = 2000,
   ) {
     this.metadata = metadata;
     this.tileCornerIndex = tileCornerIndex;
@@ -101,61 +101,7 @@ export class TileManager {
         tiles.push({ z, x, y });
       }
     }
-
-    // Prioritize requests near viewport center to reduce flashing while panning.
-    const center = map.getCenter();
-    const centerPx = this.lngLatToLevelPixel(center.lng, center.lat, z);
-    if (!centerPx) return tiles;
-
-    tiles.sort((a, b) => {
-      const aCx = (a.x + 0.5) * tileSize;
-      const aCy = (a.y + 0.5) * tileSize;
-      const bCx = (b.x + 0.5) * tileSize;
-      const bCy = (b.y + 0.5) * tileSize;
-      const da = (aCx - centerPx.px) ** 2 + (aCy - centerPx.py) ** 2;
-      const db = (bCx - centerPx.px) ** 2 + (bCy - centerPx.py) ** 2;
-      return da - db;
-    });
     return tiles;
-  }
-
-  getTileBounds(id: TileId): TileBounds {
-    const corners = this.getTileCorners(id);
-    if (corners) {
-      return {
-        west: Math.min(corners.nw[0], corners.ne[0], corners.se[0], corners.sw[0]),
-        south: Math.min(corners.nw[1], corners.ne[1], corners.se[1], corners.sw[1]),
-        east: Math.max(corners.nw[0], corners.ne[0], corners.se[0], corners.sw[0]),
-        north: Math.max(corners.nw[1], corners.ne[1], corners.se[1], corners.sw[1]),
-      };
-    }
-
-    const grid = this.metadata.tile_grid;
-    const [west, south, east, north] = grid.bounds;
-    const shape = this.getLevelShape(id.z);
-    const tileSize = grid.tile_size;
-
-    const x0 = id.x * tileSize;
-    const x1 = Math.min((id.x + 1) * tileSize, shape.width);
-    const y0 = id.y * tileSize;
-    const y1 = Math.min((id.y + 1) * tileSize, shape.height);
-
-    const fullX0 = x0 * shape.scale;
-    const fullX1 = x1 * shape.scale;
-    const fullY0 = y0 * shape.scale;
-    const fullY1 = y1 * shape.scale;
-
-    const lng0 = west + (fullX0 / grid.full_width) * (east - west);
-    const lng1 = west + (fullX1 / grid.full_width) * (east - west);
-    const lat0 = north - (fullY0 / grid.full_height) * (north - south);
-    const lat1 = north - (fullY1 / grid.full_height) * (north - south);
-
-    return {
-      west: Math.min(lng0, lng1),
-      south: Math.min(lat0, lat1),
-      east: Math.max(lng0, lng1),
-      north: Math.max(lat0, lat1),
-    };
   }
 
   getTilePixelSize(id: TileId): { width: number; height: number } {
@@ -202,13 +148,13 @@ export class TileManager {
     scenario: string,
     variable: string,
     id: TileId,
-  ): Promise<FloatTile | null> {
+  ): Promise<TemporalTile | null> {
     const key = `${scenario}|${variable}|${this.tileKey(id)}`;
     const cached = this.tileCache.get(key);
     if (cached) return cached;
 
     const url = buildTileUrl(this.metadata, scenario, variable, id);
-    const loadPromise = loadFloatTile(url, id);
+    const loadPromise = loadTemporalTile(url, id);
     this.tileCache.set(key, loadPromise);
     this.pruneCache();
     return loadPromise;
